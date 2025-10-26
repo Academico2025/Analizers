@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Detector, Generador y Humanizador de Texto IA - Gemini</title>
+<style>
+/* (todo tu estilo original intacto) */
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f8fafc;
+    color: #1f2937;
+    max-width: 1000px;
+    margin: auto;
+    padding: 20px;
+    transition: background 0.3s, color 0.3s;
+}
+h1, h2, h3 { color: #111827; transition: color 0.3s; }
+textarea, input, select {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 15px;
+    background: #ffffff;
+    transition: background 0.3s, color 0.3s, border-color 0.3s;
+}
+textarea { min-height: 200px; }
+button {
+    background: #2563eb;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin: 5px 5px 5px 0;
+    font-size: 15px;
+    transition: background 0.3s;
+}
+button:hover { background: #1e3a8a; }
+#resultado, #textoGenerado, #analisisIA, #textoHumanizado {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    padding: 15px;
+    border-radius: 6px;
+    margin-top: 15px;
+    white-space: pre-wrap;
+    transition: background 0.3s, color 0.3s, border-color 0.3s;
+}
+.resaltadoIA {
+    background: yellow;
+    font-weight: bold;
+    border-radius: 3px;
+}
+#status span.error { color: red; font-weight: bold; }
+#status span.success { color: green; font-weight: bold; }
+
+/* 🌙 MODO OSCURO */
+body.dark-mode {
+    background: #0f172a;
+    color: #e2e8f0;
+}
+body.dark-mode h1, body.dark-mode h2, body.dark-mode h3 {
+    color: #f1f5f9;
+}
+body.dark-mode textarea,
+body.dark-mode input,
+body.dark-mode select,
+body.dark-mode #resultado,
+body.dark-mode #analisisIA,
+body.dark-mode #textoGenerado,
+body.dark-mode #textoHumanizado {
+    background: #1e293b;
+    color: #f1f5f9;
+    border-color: #334155;
+}
+body.dark-mode button {
+    background: #334155;
+    color: #f1f5f9;
+}
+body.dark-mode button:hover {
+    background: #1e293b;
+}
+
+/* 🎛 Botón flotante modo oscuro */
+#toggleDarkMode {
+    position: fixed;
+    bottom: 15px;
+    right: 15px;
+    background: #1f2937;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 14px;
+    z-index: 9999;
+    transition: background 0.3s;
+}
+#toggleDarkMode:hover { background: #000000; }
+</style>
+</head>
+<body>
+
+<h1>🧠 Detector, Generador y Humanizador de Texto (Google Gemini)</h1>
+
+<h3>🔐 API Key</h3>
+<div style="display:flex; gap:10px;">
+    <input type="password" id="apiKeyInput" placeholder="Ingrese su API Key">
+    <button onclick="mostrarOcultarApiKey()" id="toggleApiKey">👁 Mostrar</button>
+</div>
+<button onclick="guardarApiKey()">Guardar API Key</button>
+<button onclick="verificarApiKey()">Verificar</button>
+<button onclick="probarConexion()">Probar conexión</button>
+<div id="status"></div>
+
+<h3>📌 Modelo IA</h3>
+<select id="modelSelect">
+    <option value="">Cargando modelos...</option>
+</select>
+
+<hr>
+
+<h2>✨ Generar Texto</h2>
+<button onclick="generarTexto()">Generar texto de ejemplo</button>
+<div id="textoGenerado">Aquí aparecerá el texto generado...</div>
+
+<hr>
+
+<h2>🧐 Verificar si un texto es generado por IA</h2>
+<textarea id="textoEntrada" placeholder="Pegue aquí el texto que desea analizar..."></textarea>
+<button onclick="verificarTexto()">Verificar texto</button>
+<button onclick="limpiarCampos()">🧹 Limpiar todo</button>
+<div id="resultado"></div>
+<div id="analisisIA"></div>
+
+<!-- ✅ NUEVOS BOTONES EXPORTAR TEXTO VERIFICADO -->
+<div style="margin-top:10px;">
+    <button onclick="exportarPDF('resultado', 'Texto Verificado – AnalizerII')">📄 Exportar Verificado en PDF</button>
+    <button onclick="exportarWord('resultado', 'Texto Verificado – AnalizerII')">📝 Exportar Verificado en Word</button>
+</div>
+
+<hr>
+
+<h2>📝 Humanizar texto</h2>
+<button onclick="humanizarTexto()">Humanizar texto</button>
+<div id="textoHumanizado">Aquí aparecerá el texto humanizado...</div>
+<button onclick="copiarTextoHumanizado()">📋 Copiar texto humanizado</button>
+
+<!-- ✅ NUEVOS BOTONES EXPORTAR TEXTO HUMANIZADO -->
+<div style="margin-top:10px;">
+    <button onclick="exportarPDF('textoHumanizado', 'Texto Humanizado – AnalizerII')">📄 Exportar Humanizado en PDF</button>
+    <button onclick="exportarWord('textoHumanizado', 'Texto Humanizado – AnalizerII')">📝 Exportar Humanizado en Word</button>
+</div>
+
+<button id="toggleDarkMode" onclick="toggleDark()">🌙 Modo oscuro</button>
+
+<script>
+// --- (todo tu JS original intacto hasta el final) ---
+
+let API_KEY = localStorage.getItem("apiKey") || "";
+
+function toggleDark() {
+    document.body.classList.toggle("dark-mode");
+    const btn = document.getElementById("toggleDarkMode");
+    btn.textContent = document.body.classList.contains("dark-mode") ? "☀ Modo claro" : "🌙 Modo oscuro";
+}
+
+function mostrarOcultarApiKey() {
+    const input = document.getElementById('apiKeyInput');
+    const button = document.getElementById('toggleApiKey');
+    if (input.type === "password") {
+        input.type = "text";
+        button.textContent = "🙈 Ocultar";
+    } else {
+        input.type = "password";
+        button.textContent = "👁 Mostrar";
+    }
+}
+
+function actualizarStatus(msg, error = false) {
+    document.getElementById("status").innerHTML = `<span class="${error ? 'error' : 'success'}">${msg}</span>`;
+}
+
+function guardarApiKey() {
+    API_KEY = document.getElementById("apiKeyInput").value.trim();
+    if (!API_KEY) return alert("Ingrese una API Key válida.");
+    localStorage.setItem("apiKey", API_KEY);
+    actualizarStatus("✅ API Key guardada.");
+    cargarModelos();
+}
+
+async function verificarApiKey() {
+    try {
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${API_KEY}`);
+        if (!r.ok) throw new Error();
+        actualizarStatus("✅ API Key válida.");
+    } catch {
+        actualizarStatus("❌ API Key incorrecta o sin permisos.", true);
+    }
+}
+
+async function probarConexion() {
+    try {
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${API_KEY}`);
+        if (!r.ok) throw new Error();
+        actualizarStatus("✅ Conexión exitosa.");
+    } catch {
+        actualizarStatus("❌ No se pudo conectar.", true);
+    }
+}
+
+async function cargarModelos() {
+    if (!API_KEY) return;
+    try {
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${API_KEY}`);
+        const data = await r.json();
+        const modelos = data.models.map(m => m.name).filter(n => n.includes("gemini"));
+        document.getElementById("modelSelect").innerHTML =
+            modelos.map(m => `<option value="${m}">${m}</option>`).join("");
+        actualizarStatus("✅ Modelos cargados.");
+    } catch {
+        actualizarStatus("❌ Error al cargar modelos.", true);
+    }
+}
+if (API_KEY) {
+    document.getElementById("apiKeyInput").value = API_KEY;
+    cargarModelos();
+}
+
+async function generarTexto() {
+    const modelo = document.getElementById("modelSelect").value;
+    const div = document.getElementById("textoGenerado");
+    div.innerHTML = "⏳ Generando...";
+    try {
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/${modelo}:generateContent?key=${API_KEY}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: "Genera un texto sobre ciudades inteligentes del futuro y sostenibilidad." }] }]
+            })
+        });
+        const data = await r.json();
+        div.innerHTML = data.candidates[0].content.parts[0].text;
+    } catch {
+        div.innerHTML = "❌ Error al generar texto.";
+    }
+}
+
+async function verificarTexto() {
+    const texto = document.getElementById("textoEntrada").value.trim();
+    if (!texto) return alert("Ingrese texto para analizar.");
+    document.getElementById("resultado").innerHTML = "⏳ Analizando...";
+    document.getElementById("analisisIA").innerHTML = "";
+    try {
+        const prompt = `
+        Analiza este texto y responde:
+        1. ¿Es IA o humano? Explica.
+        2. Porcentaje aproximado de contenido IA.
+        3. Frases generadas por IA.
+        Texto: "${texto}"
+        `;
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/${document.getElementById("modelSelect").value}:generateContent?key=${API_KEY}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
+        const data = await r.json();
+        const respuesta = data.candidates[0].content.parts[0].text;
+        document.getElementById("resultado").innerHTML =
+            respuesta.split("\n").map(p => `<p>${p}</p>`).join("");
+        const porcentaje = respuesta.match(/(\d+)%/g) ? respuesta.match(/(\d+)%/g)[0] : "No definido";
+        let frasesIA = respuesta.split(/3\./i)[1] || "";
+        frasesIA = frasesIA.split(/[\n\.\-•]/).map(f => f.trim()).filter(f => f.length > 5);
+        let resaltado = texto;
+        frasesIA.forEach(frase => {
+            if (resaltado.includes(frase)) {
+                resaltado = resaltado.replace(frase, `<span class="resaltadoIA">${frase}</span>`);
+            }
+        });
+        document.getElementById("analisisIA").innerHTML = `
+            <h3>📊 Resultados IA vs Humano</h3>
+            <p><strong>Estimación IA:</strong> ${porcentaje}</p>
+            <p><strong>Texto con partes de IA resaltadas:</strong></p>
+            <div style="padding:10px; border:1px solid #cbd5e1;">${resaltado}</div>
+        `;
+    } catch {
+        document.getElementById("resultado").innerHTML = "❌ Error en el análisis.";
+    }
+}
+
+async function humanizarTexto() {
+    const texto = document.getElementById("textoEntrada").value.trim();
+    const div = document.getElementById("textoHumanizado");
+    if (!texto) return alert("Pegue un texto para humanizar.");
+    div.innerHTML = "⏳ Humanizando...";
+    try {
+        const prompt = `Reescribe el siguiente texto de forma más humana, natural y menos mecánica, sin cambiar su idea principal:
+"${texto}"`;
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/${document.getElementById("modelSelect").value}:generateContent?key=${API_KEY}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
+        const data = await r.json();
+        div.innerHTML = data.candidates[0].content.parts[0].text;
+    } catch {
+        div.innerHTML = "❌ Error al humanizar.";
+    }
+}
+
+function copiarTextoHumanizado() {
+    const texto = document.getElementById("textoHumanizado").innerText;
+    navigator.clipboard.writeText(texto)
+        .then(() => alert("✅ Texto copiado."))
+        .catch(() => alert("❌ Error al copiar."));
+}
+
+function limpiarCampos() {
+    document.getElementById("textoEntrada").value = "";
+    document.getElementById("textoGenerado").innerHTML = "Aquí aparecerá el texto generado...";
+    document.getElementById("resultado").innerHTML = "";
+    document.getElementById("analisisIA").innerHTML = "";
+    document.getElementById("textoHumanizado").innerHTML = "Aquí aparecerá el texto humanizado...";
+    alert("🧹 Campos limpiados (API Key intacta)");
+}
+
+/* --- 🧾 NUEVAS FUNCIONES EXPORTAR --- */
+function exportarPDF(id, titulo) {
+    const texto = document.getElementById(id).innerText.trim();
+    if (!texto) return alert("No hay contenido para exportar.");
+    const ventana = window.open("", "_blank");
+    ventana.document.write(`<pre>${texto}</pre>`);
+    ventana.document.title = titulo;
+    ventana.print();
+}
+
+function exportarWord(id, titulo) {
+    const texto = document.getElementById(id).innerText.trim();
+    if (!texto) return alert("No hay contenido para exportar.");
+    const blob = new Blob([`<h2>${titulo}</h2><pre>${texto}</pre>`], { type: "application/msword" });
+    const enlace = document.createElement("a");
+    enlace.href = URL.createObjectURL(blob);
+    enlace.download = `${titulo}.doc`;
+    enlace.click();
+}
+</script>
+</body>
+</html>
